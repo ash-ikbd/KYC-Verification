@@ -1,0 +1,7 @@
+{
+  "name": "Automated KYC Verification",
+  "description": "A micro-service application to automate the Know Your Customer (KYC) process by extracting information from government-issued documents and capturing a user's face for verification.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
