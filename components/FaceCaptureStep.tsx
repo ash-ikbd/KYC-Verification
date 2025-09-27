@@ -22,6 +22,42 @@ const initialChallenges: LivenessChallenge[] = [
   { id: 'blink', prompt: 'Blink with both eyes', status: 'pending' },
 ];
 
+// --- Audio Feedback Utility ---
+const audioContext = typeof window !== 'undefined' ? new (window.AudioContext || (window as any).webkitAudioContext)() : null;
+
+const playTone = (type: 'success' | 'final') => {
+  if (!audioContext) return;
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+
+  if (type === 'success') {
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.2);
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  } else if (type === 'final') {
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(1046.50, audioContext.currentTime); // C6 note
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+
+    // Play a second note for a "complete" chime
+    const oscillator2 = audioContext.createOscillator();
+    oscillator2.connect(gainNode);
+    oscillator2.type = 'triangle';
+    oscillator2.frequency.setValueAtTime(1318.51, audioContext.currentTime + 0.1); // E6 note
+    oscillator2.start(audioContext.currentTime + 0.1);
+    oscillator2.stop(audioContext.currentTime + 0.4);
+  }
+};
+// --- End Audio Feedback Utility ---
+
 const ChallengeIndicator: React.FC<{ challenge: LivenessChallenge }> = ({ challenge }) => {
   const { status, prompt } = challenge;
   
@@ -100,10 +136,12 @@ const FaceCaptureStep: React.FC<FaceCaptureStepProps> = ({ onNext, updateKycData
 
               if (currentChallengeIndex === challenges.length - 1) {
                 // Last challenge, capture final image and stop
+                playTone('final');
                 const finalImage = cameraRef.current.capture();
                 setCapturedImage(finalImage);
                 if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
               } else {
+                playTone('success');
                 setCurrentChallengeIndex(prev => prev + 1);
               }
             }
